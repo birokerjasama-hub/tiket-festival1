@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Tiket Festival Musik Akustik</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container-box { max-width: 1200px; margin: 0 auto; }
+        .header {
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            text-align: center;
+            margin-bottom: 25px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        }
+        .header h1 {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 32px;
+        }
+        .main-card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+        .nav-tabs { border: none; gap: 10px; margin-bottom: 20px; }
+        .nav-tabs .nav-link {
+            border-radius: 50px;
+            padding: 12px 25px;
+            font-weight: 600;
+            border: none;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .nav-tabs .nav-link.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 50px;
+            padding: 12px 25px;
+            font-weight: 600;
+        }
+        .ticket-card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            border: 1px solid #eee;
+        }
+        .barcode-text {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 10px;
+            font-family: monospace;
+            text-align: center;
+            word-break: break-all;
+        }
+        #kameraContainer {
+            background: #000;
+            border-radius: 15px;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        #videoPreview {
+            width: 100%;
+            max-width: 500px;
+            border-radius: 10px;
+            margin: 0 auto;
+        }
+        .camera-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 768px) {
+            .camera-options { grid-template-columns: 1fr; }
+            .header h1 { font-size: 24px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-box">
+    <div class="header">
+        <h1><i class="fas fa-music me-2"></i>FESTIVAL MUSIK AKUSTIK</h1>
+        <h4>HARLAH UIMSYA KE-25</h4>
+        <p class="text-muted mt-2">Sistem Tiket Digital</p>
+    </div>
+
+    <ul class="nav nav-tabs justify-content-center">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#beli"><i class="fas fa-ticket-alt me-2"></i>Beli Tiket</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#cek"><i class="fas fa-search me-2"></i>Cek Tiket</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#admin"><i class="fas fa-user-shield me-2"></i>Admin</button></li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- TAB BELI TIKET -->
+        <div class="tab-pane fade show active" id="beli">
+            <div class="main-card">
+                <div id="alertBeli"></div>
+                <form id="formBeli">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nama Lengkap</label>
+                            <input type="text" class="form-control" id="nama" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nomor HP</label>
+                            <input type="tel" class="form-control" id="noHp" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Jumlah Tiket</label>
+                            <input type="number" class="form-control" id="jumlah" value="1" min="1" max="10" required>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Upload Bukti Pembayaran</label>
+                            <input type="file" class="form-control" id="file" accept="image/*,application/pdf" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100"><i class="fas fa-paper-plane me-2"></i>KIRIM PESANAN</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- TAB CEK TIKET -->
+        <div class="tab-pane fade" id="cek">
+            <div class="main-card">
+                <div id="alertCek"></div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" id="cekEmail">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Nomor HP</label>
+                    <input type="tel" class="form-control" id="cekHp">
+                </div>
+                <button class="btn btn-primary w-100" id="btnCek"><i class="fas fa-search me-2"></i>CEK TIKET</button>
+                <div id="hasilCek" class="mt-4"></div>
+            </div>
+        </div>
+
+        <!-- TAB ADMIN -->
+        <div class="tab-pane fade" id="admin">
+            <div class="main-card">
+                <div id="alertAdmin"></div>
+                <div id="loginBox">
+                    <div class="text-center mb-4"><i class="fas fa-user-lock fa-3x" style="color:#667eea"></i><h5 class="mt-2">Login Admin</h5></div>
+                    <div class="mb-3"><label class="form-label">Username</label><input type="text" class="form-control" id="username"></div>
+                    <div class="mb-3"><label class="form-label">Password</label><input type="password" class="form-control" id="password"></div>
+                    <button class="btn btn-primary w-100" id="btnLogin"><i class="fas fa-sign-in-alt me-2"></i>LOGIN ADMIN</button>
+                </div>
+                <div id="dashboard" style="display:none;">
+                    <div class="mb-4">
+                        <h5 class="mb-3"><i class="fas fa-qrcode me-2"></i>Scanner Tiket</h5>
+                        <div class="camera-options">
+                            <button class="btn btn-outline-primary" onclick="startScanner('environment')"><i class="fas fa-camera me-2"></i>Kamera Belakang</button>
+                            <button class="btn btn-outline-secondary" onclick="startScanner('user')"><i class="fas fa-camera-retro me-2"></i>Kamera Depan</button>
+                        </div>
+                        <div id="kameraContainer" style="display:none;">
+                            <video id="videoPreview" autoplay playsinline></video>
+                            <button class="btn btn-danger mt-2 w-100" onclick="stopScanner()"><i class="fas fa-stop me-2"></i>Hentikan Scanner</button>
+                        </div>
+                        <div class="mt-3">
+                            <label class="form-label">Atau Input Manual Barcode</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="barcodeInput" placeholder="Masukkan kode barcode">
+                                <button class="btn btn-primary" onclick="validasiManual()"><i class="fas fa-check me-2"></i>Validasi</button>
+                            </div>
+                        </div>
+                        <div id="hasilScan" class="mt-3"></div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-6"><div class="text-center p-3 bg-light rounded"><h3 id="totalTiket">0</h3><small>Total Tiket</small></div></div>
+                        <div class="col-6"><div class="text-center p-3 bg-light rounded"><h3 id="sudahMasuk">0</h3><small>Sudah Masuk</small></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ==================== KONFIGURASI ====================
+// GANTI DENGAN WEB APP URL ANDA (dari Langkah 3)
+const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbzjqeUyc3_ANf_wI77Fi1Qju4fc_GOCEKbriWS9WLggZYCzHFVU5Ylt1yIS2inYY4aQ/exec';
+
+let adminSession = null;
+let stream = null;
+let codeReader = null;
+let isScanning = false;
+
+function showAlert(containerId, message, type) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const alertClass = type === 'success' ? 'alert-success' : type === 'error' ? 'alert-danger' : 'alert-info';
+    container.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
+    setTimeout(() => { const alert = container.querySelector('.alert'); if(alert) alert.remove(); }, 5000);
+}
+
+// BELI TIKET
+document.getElementById('formBeli').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const file = document.getElementById('file').files[0];
+    if (!file) { showAlert('alertBeli', 'Upload bukti pembayaran', 'error'); return; }
+    
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const base64File = e.target.result.split(',')[1];
+        const peserta = {
+            nama: document.getElementById('nama').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            noHp: document.getElementById('noHp').value.trim(),
+            jumlahTiket: parseInt(document.getElementById('jumlah').value),
+            fileBase64: base64File,
+            fileName: file.name
+        };
+        
+        try {
+            const response = await fetch(`${GAS_API_URL}?action=beli`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(peserta)
+            });
+            const res = await response.json();
+            if (res.success) {
+                showAlert('alertBeli', res.message, 'success');
+                document.getElementById('formBeli').reset();
+            } else {
+                showAlert('alertBeli', res.message, 'error');
+            }
+        } catch(err) {
+            showAlert('alertBeli', 'Error: ' + err.message, 'error');
+        }
+    };
+    reader.readAsDataURL(file);
+});
+
+// CEK TIKET
+document.getElementById('btnCek').addEventListener('click', async function() {
+    const email = document.getElementById('cekEmail').value.trim();
+    const hp = document.getElementById('cekHp').value.trim();
+    if (!email || !hp) { showAlert('alertCek', 'Isi email dan nomor HP', 'warning'); return; }
+    
+    try {
+        const response = await fetch(`${GAS_API_URL}?action=cek&email=${encodeURIComponent(email)}&hp=${encodeURIComponent(hp)}`);
+        const data = await response.json();
+        
+        if (!data || data.length === 0) {
+            document.getElementById('hasilCek').innerHTML = '<div class="alert alert-warning">Tiket tidak ditemukan</div>';
+            return;
+        }
+        
+        let html = '';
+        data.forEach((tiket, index) => {
+            html += `
+                <div class="ticket-card" id="ticket-${index}">
+                    <div class="text-center"><h5>🎸 FESTIVAL MUSIK AKUSTIK</h5><small>HARLAH UIMSYA KE-25</small></div>
+                    <hr>
+                    <div class="row"><div class="col-6"><small>ID Tiket</small><p class="fw-bold">${tiket.idTiket}</p></div>
+                    <div class="col-6"><small>Status</small><p><span class="badge ${tiket.statusMasuk === 'SUDAH' ? 'bg-success' : 'bg-warning'}">${tiket.statusMasuk === 'SUDAH' ? '✓ SUDAH MASUK' : '○ BELUM MASUK'}</span></p></div></div>
+                    <div class="barcode-text mb-3">${tiket.barcode}</div>
+                    <div class="qr-placeholder" id="qrcode-${index}"></div>
+                    <div class="d-grid gap-2 mt-3">
+                        <button class="btn btn-sm btn-outline-primary" onclick="downloadTiket(${index})"><i class="fas fa-download me-2"></i>Download Tiket</button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="printTiket(${index})"><i class="fas fa-print me-2"></i>Cetak Tiket</button>
+                    </div>
+                </div>
+            `;
+        });
+        document.getElementById('hasilCek').innerHTML = html;
+        data.forEach((tiket, index) => {
+            new QRCode(document.getElementById(`qrcode-${index}`), { text: tiket.barcode, width: 200, height: 200 });
+        });
+    } catch(err) {
+        showAlert('alertCek', 'Error: ' + err.message, 'error');
+    }
+});
+
+function downloadTiket(index) {
+    const element = document.getElementById(`ticket-${index}`);
+    html2canvas(element, { scale: 2 }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `Tiket_${Date.now()}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+    });
+}
+
+function printTiket(index) {
+    const element = document.getElementById(`ticket-${index}`);
+    const win = window.open('');
+    win.document.write(`<html><head><title>Cetak Tiket</title><style>body{font-family:Arial;padding:20px}</style></head><body>${element.outerHTML}</body></html>`);
+    win.document.close();
+    win.print();
+}
+
+// LOGIN ADMIN
+document.getElementById('btnLogin').addEventListener('click', async function() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    
+    try {
+        const response = await fetch(`${GAS_API_URL}?action=login&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`);
+        const res = await response.json();
+        if (res.success) {
+            adminSession = username;
+            document.getElementById('loginBox').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            showAlert('alertAdmin', 'Login berhasil!', 'success');
+            loadStatistik();
+        } else {
+            showAlert('alertAdmin', 'Username/password salah!', 'error');
+        }
+    } catch(err) {
+        showAlert('alertAdmin', 'Error: ' + err.message, 'error');
+    }
+});
+
+async function loadStatistik() {
+    try {
+        const response = await fetch(`${GAS_API_URL}?action=statistik`);
+        const stat = await response.json();
+        document.getElementById('totalTiket').textContent = stat.totalTiket || 0;
+        document.getElementById('sudahMasuk').textContent = stat.sudahMasuk || 0;
+    } catch(err) { console.error(err); }
+}
+
+// SCANNER
+async function startScanner(facingMode = 'environment') {
+    const kameraContainer = document.getElementById('kameraContainer');
+    const video = document.getElementById('videoPreview');
+    const hasilScan = document.getElementById('hasilScan');
+    
+    if (isScanning) stopScanner();
+    hasilScan.innerHTML = '<div class="alert alert-info">Mengaktifkan kamera...</div>';
+    
+    try {
+        const constraints = { video: { facingMode: facingMode }, audio: false };
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = stream;
+        await video.play();
+        kameraContainer.style.display = 'block';
+        hasilScan.innerHTML = '<div class="alert alert-success">Kamera aktif! Arahkan ke barcode.</div>';
+        
+        codeReader = new ZXing.BrowserMultiFormatReader();
+        isScanning = true;
+        await codeReader.decodeFromVideoElement(video, async (result, err) => {
+            if (result && isScanning) {
+                const barcode = result.getText();
+                document.getElementById('barcodeInput').value = barcode;
+                await prosesValidasi(barcode);
+                stopScanner();
+            }
+        });
+    } catch(error) {
+        hasilScan.innerHTML = `<div class="alert alert-danger">Gagal akses kamera: ${error.message}</div>`;
+    }
+}
+
+function stopScanner() {
+    isScanning = false;
+    if (codeReader) { try { codeReader.reset(); } catch(e){} codeReader = null; }
+    if (stream) { stream.getTracks().forEach(track => track.stop()); stream = null; }
+    document.getElementById('kameraContainer').style.display = 'none';
+}
+
+async function validasiManual() {
+    const barcode = document.getElementById('barcodeInput').value.trim();
+    if (!barcode) { showAlert('hasilScan', 'Masukkan barcode', 'warning'); return; }
+    await prosesValidasi(barcode);
+}
+
+async function prosesValidasi(barcode) {
+    if (!adminSession) { document.getElementById('hasilScan').innerHTML = '<div class="alert alert-danger">Login admin dulu</div>'; return; }
+    
+    document.getElementById('hasilScan').innerHTML = '<div class="alert alert-info">Memvalidasi...</div>';
+    try {
+        const response = await fetch(`${GAS_API_URL}?action=scan&barcode=${encodeURIComponent(barcode)}&admin=${encodeURIComponent(adminSession)}`);
+        const res = await response.json();
+        if (res.success) {
+            document.getElementById('hasilScan').innerHTML = `<div class="alert alert-success">✅ ${res.message}</div>`;
+            document.getElementById('barcodeInput').value = '';
+            loadStatistik();
+        } else {
+            document.getElementById('hasilScan').innerHTML = `<div class="alert alert-danger">❌ ${res.message}</div>`;
+        }
+    } catch(err) {
+        document.getElementById('hasilScan').innerHTML = `<div class="alert alert-danger">Error: ${err.message}</div>`;
+    }
+}
+</script>
+</body>
+</html>
